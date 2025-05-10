@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Chatbot</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+        .user-message {
+            background-color: #e2f3ff;
+            border-radius: 18px 18px 0 18px;
+        }
+        .bot-message {
+            background-color: #f0f0f0;
+            border-radius: 18px 18px 18px 0;
+        }
+        .typing-indicator {
+            display: inline-block;
+        }
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            float: left;
+            margin: 0 1px;
+            background-color: #9E9EA1;
+            display: block;
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        .typing-indicator span:nth-of-type(1) {
+            animation: 1s blink infinite 0.3333s;
+        }
+        .typing-indicator span:nth-of-type(2) {
+            animation: 1s blink infinite 0.6666s;
+        }
+        .typing-indicator span:nth-of-type(3) {
+            animation: 1s blink infinite 0.9999s;
+        }
+        @keyframes blink {
+            50% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-600">News Chatbot</h1>
+            <p class="text-gray-600">Ask me anything about recent news!</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <!-- Chat messages container -->
+            <div id="chat-container" class="chat-container mb-4 p-4 border border-gray-200 rounded">
+                <div class="bot-message p-3 mb-4 max-w-3xl">
+                    <p>Hello! I'm your news assistant. I can help you find and summarize news from various sources. Ask me about any recent news topics!</p>
+                </div>
+            </div>
+
+            <!-- Input area -->
+            <div class="flex">
+                <input type="text" id="user-input" class="flex-grow border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ask about recent news...">
+                <button id="send-button" class="bg-blue-600 text-white px-6 py-2 rounded-r-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">Send</button>
+            </div>
+
+            <!-- Refresh news button -->
+            <div class="mt-4 text-right">
+                <button id="refresh-button" class="text-sm text-blue-600 hover:text-blue-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh News Data
+                </button>
+            </div>
+        </div>
+
+        <footer class="mt-8 text-center text-sm text-gray-500">
+            <p>Powered by Llama and RAG technology</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatContainer = document.getElementById('chat-container');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+            const refreshButton = document.getElementById('refresh-button');
+
+            // Function to add a message to the chat
+            function addMessage(content, isUser = false, sources = []) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = isUser ? 'user-message p-3 mb-4 ml-auto max-w-3xl' : 'bot-message p-3 mb-4 max-w-3xl';
+                
+                // Add the main message content
+                const contentPara = document.createElement('p');
+                contentPara.textContent = content;
+                messageDiv.appendChild(contentPara);
+                
+                // Add sources if provided
+                if (sources && sources.length > 0) {
+                    const sourcesDiv = document.createElement('div');
+                    sourcesDiv.className = 'mt-2 text-xs text-gray-600';
+                    sourcesDiv.innerHTML = '<p class="font-semibold">Sources:</p>';
+                    
+                    const sourcesList = document.createElement('ul');
+                    sourcesList.className = 'list-disc pl-5 mt-1';
+                    
+                    sources.forEach(source => {
+                        const sourceItem = document.createElement('li');
+                        const sourceLink = document.createElement('a');
+                        sourceLink.href = source.url;
+                        sourceLink.target = '_blank';
+                        sourceLink.textContent = `${source.title} (${source.source})`;
+                        sourceLink.className = 'text-blue-600 hover:underline';
+                        sourceItem.appendChild(sourceLink);
+                        sourcesList.appendChild(sourceItem);
+                    });
+                    
+                    sourcesDiv.appendChild(sourcesList);
+                    messageDiv.appendChild(sourcesDiv);
+                }
+                
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Function to show typing indicator
+            function showTypingIndicator() {
+                const indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'bot-message p-3 mb-4 max-w-3xl';
+                
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('span');
+                    typingDiv.appendChild(dot);
+                }
+                
+                indicator.appendChild(typingDiv);
+                chatContainer.appendChild(indicator);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Function to remove typing indicator
+            function removeTypingIndicator() {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
+
+            // Function to send user message to server
+            async function sendMessage(message) {
+                addMessage(message, true);
+                userInput.value = '';
+                
+                showTypingIndicator();
+                
+                try {
+                    const response = await fetch('/query', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: message }),
+                    });
+                    
+                    const data = await response.json();
+                    
+                    removeTypingIndicator();
+                    
+                    if (response.ok) {
+                        addMessage(data.answer, false, data.sources);
+                    } else {
+                        addMessage(`Error: ${data.error || 'Failed to get response'}`, false);
+                    }
+                } catch (error) {
+                    removeTypingIndicator();
+                    addMessage(`Error: Could not connect to the server. ${error.message}`, false);
+                    console.error('Error:', error);
+                }
+            }
+
+            // Event listeners
+            sendButton.addEventListener('click', function() {
+                const message = userInput.value.trim();
+                if (message) {
+                    sendMessage(message);
+                }
+            });
+
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const message = userInput.value.trim();
+                    if (message) {
+                        sendMessage(message);
+                    }
+                }
+            });
+            
+            // Refresh news data
+            refreshButton.addEventListener('click', async function() {
+                refreshButton.textContent = 'Refreshing...';
+                refreshButton.disabled = true;
+                
+                try {
+                    const response = await fetch('/refresh', {
+                        method: 'POST',
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        addMessage('System: News data refresh has been started. This process runs in the background and may take a few minutes.', false);
+                    } else {
+                        addMessage(`System Error: ${data.error || 'Failed to refresh news data'}`, false);
+                    }
+                } catch (error) {
+                    addMessage(`System Error: Could not connect to the server. ${error.message}`, false);
+                    console.error('Error:', error);
+                } finally {
+                    refreshButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Refresh News Data';
+                    refreshButton.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
