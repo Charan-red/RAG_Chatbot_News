@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 version: '3'
 
 services:
@@ -22,3 +23,29 @@ services:
 
 volumes:
   huggingface_cache:
+=======
+version: '3'
+
+services:
+  news_chatbot:
+    build: .
+    container_name: news_chatbot
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./news_index:/app/news_index
+      - huggingface_cache:/app/.cache/huggingface
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+
+volumes:
+  huggingface_cache:
+>>>>>>> 092e1a8a384a3aacc6591d60604c63f1d688b818
