@@ -168,3 +168,4 @@ if __name__ == "__main__":
     collector = NewsCollector(news_sources)
     articles = collector.scrape_all_sources()
     print(f"Collected {len(articles)} articles in total")
+    # print(type(articles)) # Print first 5 articles for verification  
